@@ -4,12 +4,12 @@ import requests
 import click
 from yt_dlp import YoutubeDL
 from pydantic import BaseModel
+import json
 
 
 def clean_text(text):
     if not text:
         return "N/A"
-
     text = re.sub(r"\s{2,}", " ", text)
     return text.strip()
 
@@ -63,34 +63,48 @@ def fetch_metadata(url, output_dir, format):
     ydl_opts = {
         "quiet": True,
         "skip_download": True,
-        "extract_flat": True,  # Fetch playlist metadata without downloading videos
+        "extract_flat": True,
     }
 
     with YoutubeDL(ydl_opts) as ydl:
         try:
+            click.echo("Starting metadata extraction...")
             info = ydl.extract_info(url, download=False)
 
             if "entries" in info:  # Playlist detected
-                click.echo(f"Processing playlist: {info['title']}")
+                click.echo(f"Processing playlist: {
+                           info['title']} ({len(info['entries'])} videos)")
+                all_metadata = []
 
-                for entry in info["entries"]:
+                for i, entry in enumerate(info["entries"], start=1):
                     if entry is None:  # Skip unavailable videos
-                        click.echo("Skipping unavailable video.")
+                        click.echo(
+                            f"[{i}/{len(info['entries'])}] Skipping unavailable video.")
                         continue
 
                     # fmt: off            
                     video_url = "https://www.youtube.com/watch?v=" + entry['id']
                     # fmt: on
-                    process_video(video_url, output_path, format)
+                    click.echo(
+                        f"[{i}/{len(info['entries'])}] Fetching video: {entry.get('title', 'Untitled')}")
+                    video_metadata = process_video(video_url)
+                    if video_metadata:
+                        all_metadata.append(video_metadata)
+
+                save_playlist_metadata(
+                    info['id'], all_metadata, output_path, format)
 
             else:  # Single video
-                process_video(url, output_path, format)
+                click.echo(f"Processing single video: {info['title']}")
+                metadata = process_video(url)
+                if metadata:
+                    save_metadata(info['id'], metadata, output_path, format)
 
         except Exception as e:
             click.echo(f"Error fetching metadata: {e}")
 
 
-def process_video(video_url, output_path, format):
+def process_video(video_url):
     ydl_opts = {
         "quiet": True,
         "skip_download": True,
@@ -115,6 +129,7 @@ def process_video(video_url, output_path, format):
                 vtt_url = next(
                     (f["url"] for f in subtitle_formats if f["ext"] == "vtt"), None)
                 if vtt_url:
+                    click.echo("Fetching transcript...")
                     raw_transcript = fetch_transcript(vtt_url)
                     transcript = clean_transcript(raw_transcript)
                 else:
@@ -122,27 +137,52 @@ def process_video(video_url, output_path, format):
             else:
                 transcript = "No English subtitles available."
 
-            metadata = VideoMetadata(
+            return VideoMetadata(
                 title=title,
                 description=description,
                 transcript=transcript
             )
 
-            if format.lower() == "json":
-                output_file = output_path / f"{info['id']}.json"
-                with open(output_file, "w", encoding="utf-8") as f:
-                    f.write(metadata.model_dump_json(indent=4))
-            else:
-                output_file = output_path / f"{info['id']}.txt"
-                with open(output_file, "w", encoding="utf-8") as f:
+        except Exception as e:
+            click.echo(f"Error processing video {video_url}: {e}")
+            return None
+
+
+def save_metadata(video_id, metadata, output_path, format):
+    try:
+        if format.lower() == "json":
+            output_file = output_path / f"{video_id}.json"
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(metadata.model_dump_json(indent=4))
+        else:
+            output_file = output_path / f"{video_id}.txt"
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(f"Title: {metadata.title}\n")
+                f.write(f"Description: {metadata.description}\n")
+                f.write(f"Transcript:\n{metadata.transcript}\n")
+        click.echo(f"Metadata saved to: {output_file}")
+    except Exception as e:
+        click.echo(f"Error saving metadata: {e}")
+
+
+def save_playlist_metadata(playlist_id, all_metadata, output_path, format):
+    try:
+        if format.lower() == "json":
+            output_file = output_path / f"{playlist_id}.json"
+            playlist_data = [metadata.dict() for metadata in all_metadata]
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(json.dumps(playlist_data, indent=4))
+        else:
+            output_file = output_path / f"{playlist_id}.txt"
+            with open(output_file, "w", encoding="utf-8") as f:
+                for metadata in all_metadata:
                     f.write(f"Title: {metadata.title}\n")
                     f.write(f"Description: {metadata.description}\n")
                     f.write(f"Transcript:\n{metadata.transcript}\n")
-
-            click.echo(f"Metadata saved to: {output_file}")
-
-        except Exception as e:
-            click.echo(f"Error processing video {video_url}: {e}")
+                    f.write(50 * "-" + "\n")
+        click.echo(f"Playlist metadata saved to: {output_file}")
+    except Exception as e:
+        click.echo(f"Error saving playlist metadata: {e}")
 
 
 def fetch_transcript(vtt_url):
