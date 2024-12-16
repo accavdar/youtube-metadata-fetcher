@@ -78,8 +78,9 @@ def fetch_metadata(url, output_dir, format):
                         click.echo("Skipping unavailable video.")
                         continue
 
-                    video_url = f"https://www.youtube.com/watch?v={
-                        entry['id']}"
+                    # fmt: off            
+                    video_url = f"https://www.youtube.com/watch?v={entry['id']}"
+                    # fmt: on
                     process_video(video_url, output_path, format)
 
             else:  # Single video
