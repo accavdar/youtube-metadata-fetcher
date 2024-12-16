@@ -1,6 +1,3 @@
-Here's the updated `README.md` with the section for installation using `pip`:
-
-```markdown
 # YouTube Metadata Fetcher
 
 A command-line tool to fetch metadata (title, description, and transcript) from YouTube videos or playlists using `yt-dlp`. The tool processes the video metadata and saves it in either JSON or plain text format.
