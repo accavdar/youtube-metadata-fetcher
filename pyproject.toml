@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "youtube-metadata-fetcher"
+version = "0.1.0"
+description = "A CLI tool to fetch metadata (title, description, transcript) from YouTube videos or playlists."
+authors = ["Abdullah Cetin Cavdar <accavdar@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/accavdar/youtube-metadata-fetcher"
+homepage = "https://github.com/accavdar/youtube-metadata-fetcher"
+keywords = ["youtube", "metadata", "yt-dlp", "transcript", "CLI"]
+
+[tool.poetry.dependencies]
+python = ">=3.9"
+yt-dlp = "^2024.12.13"
+click = "^8.1.7"
+pathlib = "^1.0.1"
+requests = "^2.32.3"
+nltk = "^3.9.1"
+pydantic = "^2.10.3"
+
+[tool.poetry.scripts]
+youtube-fetch = "youtube_metadata_fetcher.main:fetch_metadata"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
