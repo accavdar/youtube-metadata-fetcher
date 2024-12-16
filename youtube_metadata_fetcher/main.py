@@ -79,7 +79,7 @@ def fetch_metadata(url, output_dir, format):
                         continue
 
                     # fmt: off            
-                    video_url = f"https://www.youtube.com/watch?v={entry['id']}"
+                    video_url = "https://www.youtube.com/watch?v=" + entry['id']
                     # fmt: on
                     process_video(video_url, output_path, format)
 
