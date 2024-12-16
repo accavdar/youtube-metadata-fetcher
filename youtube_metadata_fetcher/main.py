@@ -53,7 +53,7 @@ class VideoMetadata(BaseModel):
 @click.option(
     "--format",
     type=click.Choice(["json", "text"], case_sensitive=False),
-    default="json",
+    default="text",
     help="Output format for the metadata (json or text).",
 )
 def fetch_metadata(url, output_dir, format):
